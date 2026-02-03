@@ -5,5 +5,9 @@ package main
 // )
 
 func main() {
-	startRepl()
+	cfg := &config{
+		nextLocationsURL: "",
+		previousLocationsURL: "",
+	}
+	startRepl(cfg)
 }
