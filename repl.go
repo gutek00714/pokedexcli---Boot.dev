@@ -14,23 +14,10 @@ import (
 type cliCommand struct {
 	name string
 	description string
-	callback func(cfg *config) error
+	callback func(cfg *config, name string) error
 }
 
 var commands map[string]cliCommand
-
-// var commands = map[string]cliCommand{
-// 	"exit": {
-// 		name:        "exit",
-// 		description: "Exit the Pokedex",
-// 		callback:    commandExit,
-// 	},
-// 	"help": {
-// 		name: "help",
-// 		description: "Displays a help message",
-// 		callback: commandHelp,
-// 	},
-// }
 
 func cleanInput(text string) []string {
 	lowered := strings.ToLower(text)
@@ -61,6 +48,11 @@ func startRepl(cfg *config) {
 			description: "Display the names of previous 20 location areas",
 			callback: commandMapb,
 		},
+		"explore": {
+			name: "explore",
+			description: "Display a list of all Pokemon in the location",
+			callback: commandExplore,
+		},
 	}
 
 	for {
@@ -76,7 +68,11 @@ func startRepl(cfg *config) {
 			// check if the key(first_word) is in map
 			cmd, exists := commands[first_word]
 			if exists {
-				err := cmd.callback(cfg)
+				var name string
+				if len(line) > 1 {
+					name = line[1]
+				}
+				err := cmd.callback(cfg, name)
 				if err != nil {
 					fmt.Println(err)
 				}
@@ -87,13 +83,13 @@ func startRepl(cfg *config) {
 	}
 }
 
-func commandExit(cfg *config) error {
+func commandExit(cfg *config, _ string) error {
 	fmt.Println("Closing the Pokedex... Goodbye!")
 	os.Exit(0)
 	return nil
 }
 
-func commandHelp(cfg *config) error {
+func commandHelp(cfg *config, _ string) error {
 	fmt.Println("Welcome to the Pokedex!")
 	fmt.Println("Usage:")
 	fmt.Println("")
@@ -121,7 +117,7 @@ type config struct {
 	pokeCache *pokecache.Cache
 }
 
-func commandMap(cfg *config) error {
+func commandMap(cfg *config, _ string) error {
 	var url string
 
 	// Check if next url exists or use default one
@@ -161,8 +157,6 @@ func commandMap(cfg *config) error {
 		}
 	}
 
-
-
 	for _, loc := range issues.Results {
 		fmt.Println(loc.Name)
 	}
@@ -174,7 +168,7 @@ func commandMap(cfg *config) error {
 	return nil
 }
 
-func commandMapb(cfg *config) error {
+func commandMapb(cfg *config, _ string) error {
 	var url string
 
 	// Check if next url exists or use default one
@@ -221,6 +215,60 @@ func commandMapb(cfg *config) error {
 	// Update pointer URL
 	cfg.nextLocationsURL = issues.Next
 	cfg.previousLocationsURL = issues.Previous
+
+	return nil
+}
+
+type LocationArea struct {
+	PokemonEncounters []struct {
+		Pokemon struct {
+			Name string `json:"name"`
+		} `json:"pokemon"` 
+	} `json:"pokemon_encounters"`	
+}
+
+func commandExplore(cfg *config, name string) error {
+	if len(name) == 0 {
+		return fmt.Errorf("you must provide a location name")
+	}
+	url := "https://pokeapi.co/api/v2/location-area/" + name
+
+	fmt.Printf("Exploring %v...\n", name)
+
+	var locationArea LocationArea
+
+	// Check cache get
+	data, found := cfg.pokeCache.Get(url)
+	if found {
+		if err := json.Unmarshal(data, &locationArea); err != nil {
+			return err
+		}
+	} else {
+		// Call API
+		res, err := http.Get(url)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+
+		// Add to cache
+		cfg.pokeCache.Add(url, body)
+
+		// Create object from the call
+		if err := json.Unmarshal(body, &locationArea); err != nil {
+			return err
+		}
+	}
+
+	fmt.Println("Found Pokemon:")
+	for _, encounter := range locationArea.PokemonEncounters {
+		fmt.Printf(" - %v\n", encounter.Pokemon.Name)
+	}
 
 	return nil
 }
