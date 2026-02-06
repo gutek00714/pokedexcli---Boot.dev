@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"io"
 	"encoding/json"
-	"github.com/gutek00714/pokedexcli/internal/pokecache"
-	"github.com/gutek00714/pokedexcli/internal/pokeapi"
+	"github.com/gutek00714/pokedexcli---Boot.dev/internal/pokecache"
+	"github.com/gutek00714/pokedexcli---Boot.dev/internal/pokeapi"
 	"math/rand"
 )
 

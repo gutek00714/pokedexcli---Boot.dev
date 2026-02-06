@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/gutek00714/pokedexcli/internal/pokecache"
+	"github.com/gutek00714/pokedexcli---Boot.dev/internal/pokecache"
 	"time"
-	"github.com/gutek00714/pokedexcli/internal/pokeapi"
+	"github.com/gutek00714/pokedexcli---Boot.dev/internal/pokeapi"
 )
 
 func main() {
